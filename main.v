@@ -12,10 +12,10 @@ fn main() {
 	mut fives := AtomicQueue[int]{}
 	mut add_results := AtomicQueue[int]{}
 	mut parts := []Part{}
-	parts << Out3{in: &input_1, out: &threes}
-	parts << Out5{in: &input_2, out: &fives}
-	parts << Add{a_in: &threes, b_in: &fives, out: &add_results}
-	parts << PrintInt{in: &add_results}
+	parts << Out3{a_in: &input_1, b_out: &threes}
+	parts << Out5{a_in: &input_2, b_out: &fives}
+	parts << Add{a_in: &threes, b_in: &fives, c_out: &add_results}
+	parts << PrintInt{a_in: &add_results}
 	
 	// value init
 	//input_1.push(false)
@@ -49,77 +49,83 @@ mut:
 }
 
 struct Out3 {
-	f fn (mut _in AtomicQueue[bool], mut _out AtomicQueue[int]) = out3
+	f fn (do_output bool) ?int = out3
 mut: 
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
-	in &AtomicQueue[bool]
-	out &AtomicQueue[int]
+	a_in &AtomicQueue[bool]
+	b_out &AtomicQueue[int]
 }
 
 fn (mut o Out3) run() {
-	o.f(mut o.in, mut o.out)
+	a_in := o.a_in.pop() or { return }
+	b_out := o.f(a_in) or { return }
+	o.b_out.push(b_out)
 }
 
-fn out3(mut _in AtomicQueue[bool], mut _out AtomicQueue[int]) {
-	do_output := _in.pop() or { return }
+fn out3(do_output bool) ?int {
 	if do_output {
-		_out.push(3)
+		return 3
 	}
+	return none
 }
 
 struct Out5 {
-	f fn (mut _in AtomicQueue[bool], mut _out AtomicQueue[int]) = out5
+	f fn (do_output bool) ?int = out5
 mut: 
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
-	in &AtomicQueue[bool]
-	out &AtomicQueue[int]
+	a_in &AtomicQueue[bool]
+	b_out &AtomicQueue[int]
 }
 
 fn (mut o Out5) run() {
-	o.f(mut o.in, mut o.out)
+	a_in := o.a_in.pop() or { return }
+	b_out := o.f(a_in) or { return }
+	o.b_out.push(b_out)
 }
 
-fn out5(mut _in AtomicQueue[bool], mut _out AtomicQueue[int]) {
-	do_output := _in.pop() or { return }
+fn out5(do_output bool) ?int {
 	if do_output {
-		_out.push(5)
+		return 5
 	}
+	return none
 }
 
 struct Add {
-	f fn (mut a_in AtomicQueue[int], mut b_in AtomicQueue[int], mut _out AtomicQueue[int]) = add
+	f fn (a int, b int) int = add
 mut: 
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
 	a_in &AtomicQueue[int]
 	b_in &AtomicQueue[int]
-	out &AtomicQueue[int]
+	c_out &AtomicQueue[int]
 }
 
 fn (mut a Add) run() {
-	a.f(mut a.a_in, mut a.b_in, mut a.out)
-}
-
-fn add(mut a_in AtomicQueue[int], mut b_in AtomicQueue[int], mut _out AtomicQueue[int]) {
-	if !a_in.is_empty() && !b_in.is_empty() {
-		a := a_in.pop() or { return }
-		b := b_in.pop() or { panic('b was empty so the a value is lost') }
-		_out.push(a + b)
+	if !a.a_in.is_empty() && !a.b_in.is_empty() {
+		a_in := a.a_in.pop() or { return }
+		b_in := a.b_in.pop() or { panic('b was empty so the a value is lost') }
+		c_out := a.f(a_in, b_in)
+		a.c_out.push(c_out)
 	}
 }
 
+fn add(a int, b int) int {
+	return a + b
+}
+
 struct PrintInt {
-	f fn (mut _in AtomicQueue[int]) = print_int
+	f fn (a int) = print_int
 mut: 
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
-	in &AtomicQueue[int]
+	a_in &AtomicQueue[int]
 }
 
 fn (mut a PrintInt) run() {
-	a.f(mut a.in)
+	a_in := a.a_in.pop() or { return }
+	a.f(a_in)
 }
 
-fn print_int(mut _in AtomicQueue[int]) {
-	println(_in.pop() or { return })
+fn print_int(a int) {
+	println(a)
 }
 
 struct AtomicQueue[T] {
