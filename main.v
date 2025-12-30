@@ -2,8 +2,6 @@ import sync.stdatomic as atom
 import runtime
 import datatypes as dt	
 
-// TODO: represent links with an input queue and an array of outputs queues to enable fan out
-
 fn main() {
 	// datastructures
 	mut input_1 := AtomicQueue[bool]{}
@@ -12,9 +10,9 @@ fn main() {
 	mut fives := AtomicQueue[int]{}
 	mut add_results := AtomicQueue[int]{}
 	mut parts := []Part{}
-	parts << Out3{a_in: &input_1, b_out: &threes}
-	parts << Out5{a_in: &input_2, b_out: &fives}
-	parts << Add{a_in: &threes, b_in: &fives, c_out: &add_results}
+	parts << Out3{a_in: &input_1, b_out: FanOut[int]{[&threes]}}
+	parts << Out5{a_in: &input_2, b_out: FanOut[int]{[&fives]}}
+	parts << Add{a_in: &threes, b_in: &fives, c_out: FanOut[int]{[&add_results]}}
 	parts << PrintInt{a_in: &add_results}
 	
 	// value init
@@ -28,6 +26,17 @@ fn main() {
 		ths << spawn part_runner(mut parts)
 	}
 	ths.wait()
+}
+
+struct FanOut[T] {
+mut:
+	fan_out []&AtomicQueue[T]
+}
+
+fn (mut f FanOut[T]) push(val T) {
+	for mut o in f.fan_out {
+		o.push(val)
+	}
 }
 
 fn part_runner(mut parts []Part) {
@@ -53,7 +62,7 @@ struct Out3 {
 mut: 
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
 	a_in &AtomicQueue[bool]
-	b_out &AtomicQueue[int]
+	b_out FanOut[int]
 }
 
 fn (mut o Out3) run() {
@@ -74,7 +83,7 @@ struct Out5 {
 mut: 
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
 	a_in &AtomicQueue[bool]
-	b_out &AtomicQueue[int]
+	b_out FanOut[int]
 }
 
 fn (mut o Out5) run() {
@@ -96,7 +105,7 @@ mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
 	a_in &AtomicQueue[int]
 	b_in &AtomicQueue[int]
-	c_out &AtomicQueue[int]
+	c_out FanOut[int]
 }
 
 fn (mut a Add) run() {
