@@ -30,7 +30,7 @@ fn main() {
 	}
 
 	// value init
-	// input_1.push(false)
+	input_1.push(false)
 	input_1.push(true)
 	input_2.push(true)
 
@@ -43,7 +43,7 @@ fn main() {
 }
 
 struct Out3 {
-	f fn (do_output bool) ?int = out3
+	f fn (do_output bool) int = out3
 mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
 	a_in  &pbp.AtomicQueue[bool]
@@ -52,12 +52,12 @@ mut:
 
 fn (mut o Out3) run() {
 	a_in := o.a_in.pop() or { return }
-	b_out := o.f(a_in) or { return }
+	b_out := o.f(a_in)
 	o.b_out.push(b_out)
 }
 
 struct Out5 {
-	f fn (do_output bool) ?int = out5
+	f fn (do_output bool) int = out5
 mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
 	a_in  &pbp.AtomicQueue[bool]
@@ -66,7 +66,7 @@ mut:
 
 fn (mut o Out5) run() {
 	a_in := o.a_in.pop() or { return }
-	b_out := o.f(a_in) or { return }
+	b_out := o.f(a_in)
 	o.b_out.push(b_out)
 }
 
