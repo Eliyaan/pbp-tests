@@ -1,10 +1,10 @@
 // need to mark the function that can be used as blocks as public to be picked up by `v doc .`
 
-pub fn out3(do_output bool) int {
+pub fn out3() int {
 	return 3
 }
 
-pub fn out5(do_output bool) int {
+pub fn out5() int {
 	return 5
 }
 
