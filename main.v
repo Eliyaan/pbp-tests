@@ -1,3 +1,4 @@
+import pbp
 import sync.stdatomic as atom
 import runtime
 
@@ -5,24 +6,24 @@ import runtime
 
 fn main() {
 	// datastructures
-	mut input_1 := AtomicQueue[bool]{}
-	mut input_2 := AtomicQueue[bool]{}
-	mut threes := AtomicQueue[int]{}
-	mut fives := AtomicQueue[int]{}
-	mut add_results := AtomicQueue[int]{}
-	mut parts := []Part{}
+	mut input_1 := pbp.AtomicQueue[bool]{}
+	mut input_2 := pbp.AtomicQueue[bool]{}
+	mut threes := pbp.AtomicQueue[int]{}
+	mut fives := pbp.AtomicQueue[int]{}
+	mut add_results := pbp.AtomicQueue[int]{}
+	mut parts := []pbp.Part{}
 	parts << Out3{
 		a_in:  &input_1
-		b_out: FanOut[int]{[&threes]}
+		b_out: pbp.FanOut[int]{[&threes]}
 	}
 	parts << Out5{
 		a_in:  &input_2
-		b_out: FanOut[int]{[&fives]}
+		b_out: pbp.FanOut[int]{[&fives]}
 	}
 	parts << Add{
 		a_in:  &threes
 		b_in:  &fives
-		c_out: FanOut[int]{[&add_results]}
+		c_out: pbp.FanOut[int]{[&add_results]}
 	}
 	parts << PrintInt{
 		a_in: &add_results
@@ -36,29 +37,17 @@ fn main() {
 	// run
 	mut ths := []thread{}
 	for _ in 0 .. runtime.nr_cpus() {
-		ths << spawn part_runner(mut parts)
+		ths << spawn pbp.part_runner(mut parts)
 	}
 	ths.wait()
-}
-
-fn part_runner(mut parts []Part) {
-	for {
-		for mut p in parts {
-			if !p.ready.compare_and_swap(true, false) {
-				continue
-			}
-			p.run()
-			p.ready.store(true)
-		}
-	}
 }
 
 struct Out3 {
 	f fn (do_output bool) ?int = out3
 mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
-	a_in  &AtomicQueue[bool]
-	b_out FanOut[int]
+	a_in  &pbp.AtomicQueue[bool]
+	b_out pbp.FanOut[int]
 }
 
 fn (mut o Out3) run() {
@@ -71,8 +60,8 @@ struct Out5 {
 	f fn (do_output bool) ?int = out5
 mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
-	a_in  &AtomicQueue[bool]
-	b_out FanOut[int]
+	a_in  &pbp.AtomicQueue[bool]
+	b_out pbp.FanOut[int]
 }
 
 fn (mut o Out5) run() {
@@ -85,9 +74,9 @@ struct Add {
 	f fn (a int, b int) int = add
 mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
-	a_in  &AtomicQueue[int]
-	b_in  &AtomicQueue[int]
-	c_out FanOut[int]
+	a_in  &pbp.AtomicQueue[int]
+	b_in  &pbp.AtomicQueue[int]
+	c_out pbp.FanOut[int]
 }
 
 fn (mut a Add) run() {
@@ -103,7 +92,7 @@ struct PrintInt {
 	f fn (a int) = print_int
 mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
-	a_in  &AtomicQueue[int]
+	a_in  &pbp.AtomicQueue[int]
 }
 
 fn (mut a PrintInt) run() {

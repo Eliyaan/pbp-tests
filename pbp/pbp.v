@@ -1,45 +1,59 @@
+module pbp
+
 import sync.stdatomic as atom
 import datatypes as dt
 
-struct AtomicQueue[T] {
+pub struct AtomicQueue[T] {
 mut:
 	ready &atom.AtomicVal[bool] = atom.new_atomic(true)
 	queue dt.Queue[T]
 }
 
-fn (mut a AtomicQueue[T]) is_empty() bool {
+pub fn (mut a AtomicQueue[T]) is_empty() bool {
 	for !a.ready.compare_and_swap(true, false) {}
 	empty := a.queue.is_empty()
 	a.ready.store(true)
 	return empty
 }
 
-fn (mut a AtomicQueue[T]) pop() !T {
+pub fn (mut a AtomicQueue[T]) pop() !T {
 	for !a.ready.compare_and_swap(true, false) {}
 	item := a.queue.pop()!
 	a.ready.store(true)
 	return item
 }
 
-fn (mut a AtomicQueue[T]) push(item T) {
+pub fn (mut a AtomicQueue[T]) push(item T) {
 	for !a.ready.compare_and_swap(true, false) {}
 	a.queue.push(item)
 	a.ready.store(true)
 }
 
-struct FanOut[T] {
+pub struct FanOut[T] {
 mut:
 	fan_out []&AtomicQueue[T]
 }
 
-fn (mut f FanOut[T]) push(val T) {
+pub fn (mut f FanOut[T]) push(val T) {
 	for mut o in f.fan_out {
 		o.push(val)
 	}
 }
 
-interface Part {
+pub interface Part {
 mut:
 	ready &atom.AtomicVal[bool]
 	run()
+}
+
+pub fn part_runner(mut parts []Part) {
+	for {
+		for mut p in parts {
+			if !p.ready.compare_and_swap(true, false) {
+				continue
+			}
+			p.run()
+			p.ready.store(true)
+		}
+	}
 }
